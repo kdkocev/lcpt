@@ -2,7 +2,29 @@ package kdkocev.humanreadable
 
 trait Expression {
   def apply(f: Expression.Action): Expression = f(this)
-  def isAlphaEquivalentTo(expr: Expression): Boolean = true
+  def isAlphaEquivalentTo(expr: Expression): Boolean = {
+    import Expression._
+    // TODO: make the possible variables an endless lazy-evaluated stream
+    // All the characters are enough for our purposes
+    val possibleVariables = ('a' to 'z').map(x => Variable(Symbol(x.toString))).toSet
+
+    // Rename all the bound variables
+    val valuesToRenameWith = ((possibleVariables diff V(this).toSet) diff V(expr).toSet)
+      .toList
+      .sortBy(v => v.s.toString)
+
+    val valuesToRenameExpr1 = BV(this)
+    val renamedBV1 = valuesToRenameExpr1.zip(valuesToRenameWith).foldLeft(this){
+      case (ex, (find, replace)) => ex(find to replace)
+    }
+
+    val valuesToRenameExpr2 = BV(expr)
+    val renamedBV2 = valuesToRenameExpr2.zip(valuesToRenameWith).foldLeft(expr){
+      case (ex, (find, replace)) => ex(find to replace)
+    }
+
+    renamedBV1 == renamedBV2
+  }
 
   def <=> : (Expression => Boolean) = isAlphaEquivalentTo
 }
@@ -16,23 +38,23 @@ object Expression {
   def app(x: Expression, y: Expression) = Application(x, y)
 
   // Bound variables
-  def BV(expression: Expression): Set[Variable] = expression match {
-    case x: Variable => Set()
+  def BV(expression: Expression): List[Variable] = expression match {
+    case x: Variable => List()
     case Application(x, y) => BV(x) ++ BV(y)
-    case Abstraction(head, body) => BV(body) + head
+    case Abstraction(head, body) => head :: BV(body)
   }
 
   // All variables
-  def V(expression: Expression): Set[Variable] = expression match {
-    case x: Variable => Set(x)
+  def V(expression: Expression): List[Variable] = expression match {
+    case x: Variable => List(x)
     case Application(x, y) => V(x) ++ V(y)
-    case Abstraction(head, body) => V(body) + head
+    case Abstraction(head, body) => head :: V(body)
   }
 
   // Free variables
-  def FV(expression: Expression): Set[Variable] = {
-    def iter(expr: Expression, bound: List[Variable]): Set[Variable] = expr match {
-      case x: Variable => if (bound.contains(x)) Set() else Set(x)
+  def FV(expression: Expression): List[Variable] = {
+    def iter(expr: Expression, bound: List[Variable]): List[Variable] = expr match {
+      case x: Variable => if (bound.contains(x)) List() else List(x)
       case Application(x, y) => iter(x, bound) ++ iter(y, bound)
       case Abstraction(head, body) => iter(body, head :: bound)
     }
@@ -90,16 +112,31 @@ case class Substitution2(find: Variable, replace: Expression) extends Expression
   }
 }
 
+// Rename the first occurrence of `find` to `replace`
 case class Renaming(find: Variable, replace: Variable) extends Expression.Action {
   def apply(expression: Expression): Expression = {
-    def iter(expr: Expression, bound: List[Variable]): Expression = expr match {
+    def iter(expr: Expression, bound: List[Variable], renameInApplication: Boolean): Expression = expr match {
       case `find` => if(bound.contains(find)) `replace` else `find`
       case x: Variable if x != find => x
-      case Application(x, y) => Application(iter(x, bound), iter(y, bound))
-      case Abstraction(`find`, body) => Abstraction(`replace`, iter(body, find :: bound))
-      case Abstraction(head, body) if head != find => Abstraction(head, iter(body, bound))
+      case Application(x, y) =>
+        // If the first occurrence of `find` hasnt been reached rename
+        // only one of the branches of the Application
+        import Expression._
+        if(renameInApplication) {
+          Application(iter(x, bound, renameInApplication), iter(y, bound, renameInApplication))
+        } else {
+          if(BV(x).contains(find)) {
+            Application(iter(x, bound, renameInApplication), y)
+          } else {
+            Application(x, iter(y, bound, renameInApplication))
+          }
+        }
+      case Abstraction(`find`, body) =>
+        // Start renaming all branches of applications
+        Abstraction(`replace`, iter(body, find :: bound, true))
+      case Abstraction(head, body) if head != find => Abstraction(head, iter(body, bound, renameInApplication))
     }
-    iter(expression, Nil)
+    iter(expression, Nil, false)
   }
 }
 
@@ -107,16 +144,19 @@ object Main extends App {
   import Expression._
 
   val e = lam('x, app('y, 'x))
-  val e1 = app(lam('x, app('x, 'z)), lam('x, lam('y, app('x, 'd))))
+  val e1 = app(lam('x, app('x, 't)), lam('x, lam('y, app('x, 'y))))
+  val e2 = app(lam('z, app('z, 't)), lam('y, lam('t, app('y, 't))))
 
-  println(e('y -> 'z))
-  println(e('y ~> 'z))
-  println(e('x to 'z))
+//  println(e('y -> 'z))
+//  println(e('y ~> 'z))
+//  println(e('x to 'z))
 //  println(BV(e))
 //  println(V(e))
 //  println(FV(e))
 //  println(BV(e1))
 //  println(V(e1))
 //  println(FV(e1))
+
+  println(e1 <=> e2)
 
 }
