@@ -53,5 +53,44 @@ class ExpressionSpecs extends Specification {
         'x to 'y mustEqual Renaming('x, 'y)
       }
     }
+
+    "Rename" in {
+      "not rename a free variable" in {
+        Variable('x)('x to 'y) mustEqual Variable('x)
+      }
+      "not rename an application of free variables" in {
+        app('x, 'y)('x to 't) mustEqual app('x, 'y)
+      }
+      "rename bound variables" in {
+        "λx.x[x -> y] == λy.y" in {
+          lam('x, 'x)('x to 'y) mustEqual lam('y, 'y)
+        }
+        "λx.xy[x -> z] == λz.zy" in {
+          lam('x, app('x, 'y))('x to 'z) mustEqual lam('z, app('z, 'y))
+        }
+        "λx.yx[x -> z] == λz.yz" in {
+          lam('x, app('y, 'x))('x to 'z) mustEqual lam('z, app('y, 'z))
+        }
+        "λxλy.x[x -> z] == λzλy.z" in {
+          lam('x, lam('y, 'x))('x to 'z) mustEqual lam('z, lam('y, 'z))
+        }
+        "λyλx.y[x -> z] == λyλz.y" in {
+          lam('y, lam('x, 'y))('x to 'z) mustEqual lam('y, lam('z, 'y))
+        }
+        "λx.xy[x -> y] throw error" in {
+          lam('x, app('x, 'y))('x to 'y) must throwAn[Exception]
+        }
+        "λx.(x(λy.y))[x -> y] throw error" in {
+          lam('x, app('x, lam('y, 'y)))('x to 'y) must throwAn[Exception]
+        }
+        "λx.(x(λz.zy))[x -> y] throw error" in {
+          lam('x, app('x, lam('z, app('z, 'y))))('x to 'y) must throwAn[Exception]
+        }
+        "λy.xy[x -> z] == λy.xy (not changed)" in {
+          val expr = lam('y, app('x, 'y))
+          expr('x to 'z) mustEqual expr
+        }
+      }
+    }
   }
 }

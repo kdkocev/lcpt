@@ -115,13 +115,13 @@ case class Substitution2(find: Variable, replace: Expression) extends Expression
 // Rename the first occurrence of `find` to `replace`
 case class Renaming(find: Variable, replace: Variable) extends Expression.Action {
   def apply(expression: Expression): Expression = {
+    import Expression._
     def iter(expr: Expression, bound: List[Variable], renameInApplication: Boolean): Expression = expr match {
       case `find` => if(bound.contains(find)) `replace` else `find`
       case x: Variable if x != find => x
       case Application(x, y) =>
         // If the first occurrence of `find` hasnt been reached rename
         // only one of the branches of the Application
-        import Expression._
         if(renameInApplication) {
           Application(iter(x, bound, renameInApplication), iter(y, bound, renameInApplication))
         } else {
@@ -132,9 +132,15 @@ case class Renaming(find: Variable, replace: Variable) extends Expression.Action
           }
         }
       case Abstraction(`find`, body) =>
+        if(BV(expr).contains(replace)) {
+          throw new Exception(s"Cannot rename λ$find.$expr[$find -> $replace]")
+        }
         // Start renaming all branches of applications
         Abstraction(`replace`, iter(body, find :: bound, true))
       case Abstraction(head, body) if head != find => Abstraction(head, iter(body, bound, renameInApplication))
+    }
+    if(FV(expression).contains(replace)) {
+      throw new Exception(s"Cannot rename $expression[$find -> $replace]")
     }
     iter(expression, Nil, false)
   }
