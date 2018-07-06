@@ -62,33 +62,44 @@ class ExpressionSpecs extends Specification {
         app('x, 'y)('x to 't) mustEqual app('x, 'y)
       }
       "rename bound variables" in {
-        "λx.x[x -> y] == λy.y" in {
+        "λx.x[x to y] == λy.y" in {
           lam('x, 'x)('x to 'y) mustEqual lam('y, 'y)
         }
-        "λx.xy[x -> z] == λz.zy" in {
+        "λx.xy[x to z] == λz.zy" in {
           lam('x, app('x, 'y))('x to 'z) mustEqual lam('z, app('z, 'y))
         }
-        "λx.yx[x -> z] == λz.yz" in {
+        "λx.yx[x to z] == λz.yz" in {
           lam('x, app('y, 'x))('x to 'z) mustEqual lam('z, app('y, 'z))
         }
-        "λxλy.x[x -> z] == λzλy.z" in {
+        "λxλy.x[x to z] == λzλy.z" in {
           lam('x, lam('y, 'x))('x to 'z) mustEqual lam('z, lam('y, 'z))
         }
-        "λyλx.y[x -> z] == λyλz.y" in {
+        "λyλx.y[x to z] == λyλz.y" in {
           lam('y, lam('x, 'y))('x to 'z) mustEqual lam('y, lam('z, 'y))
         }
-        "λx.xy[x -> y] throw error" in {
+        "λx.xy[x to y] throw error" in {
           lam('x, app('x, 'y))('x to 'y) must throwAn[Exception]
         }
-        "λx.(x(λy.y))[x -> y] throw error" in {
+        "λx.(x(λy.y))[x to y] throw error" in {
           lam('x, app('x, lam('y, 'y)))('x to 'y) must throwAn[Exception]
         }
-        "λx.(x(λz.zy))[x -> y] throw error" in {
+        "λx.(x(λz.zy))[x to y] throw error" in {
           lam('x, app('x, lam('z, app('z, 'y))))('x to 'y) must throwAn[Exception]
         }
-        "λy.xy[x -> z] == λy.xy (not changed)" in {
+        "λy.xy[x to z] == λy.xy (not changed)" in {
           val expr = lam('y, app('x, 'y))
           expr('x to 'z) mustEqual expr
+        }
+      }
+    }
+    "Substitution [x -> y]" in {
+      val l1 = lam('x, 'x)
+      "substitute free variables" in {
+        "x[x -> λy.y] == λy.y" in {
+          Variable('x)('x -> l1) mustEqual l1
+        }
+        "(λx.x)(λy.x)[x -> z] == (λx.x)(λy.z)" in {
+          app(lam('x, 'x), lam('y, 'x))('x -> 'z) mustEqual app(lam('x, 'x), lam('y, 'z))
         }
       }
     }
