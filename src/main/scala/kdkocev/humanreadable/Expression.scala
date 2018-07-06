@@ -145,24 +145,3 @@ case class Renaming(find: Variable, replace: Variable) extends Expression.Action
     iter(expression, Nil, false)
   }
 }
-
-object Main extends App {
-  import Expression._
-
-  val e = lam('x, app('y, 'x))
-  val e1 = app(lam('x, app('x, 't)), lam('x, lam('y, app('x, 'y))))
-  val e2 = app(lam('z, app('z, 't)), lam('y, lam('t, app('y, 't))))
-
-//  println(e('y -> 'z))
-//  println(e('y ~> 'z))
-//  println(e('x to 'z))
-//  println(BV(e))
-//  println(V(e))
-//  println(FV(e))
-//  println(BV(e1))
-//  println(V(e1))
-//  println(FV(e1))
-
-  println(e1 <=> e2)
-
-}
