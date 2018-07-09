@@ -1,4 +1,4 @@
-package kdkocev.humanreadable
+package kdkocev.lambdacalculus
 
 trait Expression {
   def apply(f: Expression.Action): Expression = f(this)

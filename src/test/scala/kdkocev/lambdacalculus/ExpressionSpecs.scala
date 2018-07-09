@@ -1,4 +1,4 @@
-package kdkocev.humanreadable
+package kdkocev.lambdacalculus
 
 import org.specs2.mutable.Specification
 
