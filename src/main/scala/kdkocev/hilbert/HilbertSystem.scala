@@ -49,17 +49,21 @@ object Main extends App {
       formulas match {
         // If there are no more formulas to apply -> see if the required formula has been proven
         case Nil =>
-          proven.contains{
-            case (key, `required`) =>
-              println("proven", proven)
-              println("hypothesis", hypothesis)
-              true
+          val isCorrect = proven.exists {
+            case (key, `required`) => true
+            case _ => false
+          }
 
-            case _ =>
-              println("required formula not proven")
-              println("proven", proven)
-              println("hypothesis", hypothesis)
-              false
+          if(isCorrect) {
+            println("proven", proven)
+            println("hypothesis", hypothesis)
+            true
+          }
+          else {
+            println("required formula not proven")
+            println("proven", proven)
+            println("hypothesis", hypothesis)
+            false
           }
 
         // If the current formula is an axiom - add it to the proven Map
@@ -152,7 +156,7 @@ object Main extends App {
     step1, step2, step3, step4, step5, step6, step7
   )
 
-  val res = prove(test, Implication(Not(F('D)), F('A)))
+  val res = prove(test, Implication(Not(F('D)), F('C)))
 
   println(res)
 }
