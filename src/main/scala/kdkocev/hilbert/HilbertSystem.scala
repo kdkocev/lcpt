@@ -9,10 +9,14 @@ case class Not(A: Formula) extends Formula
 case class Implication(A: Formula, B: Formula) extends Formula
 
 // Axioms
-case class Axiom1(A: Formula, B: Formula) extends Formula {
+trait Axiom extends Formula {
+  def toFormula: Implication
+}
+
+case class Axiom1(A: Formula, B: Formula) extends Axiom {
   def toFormula = Implication(A, Implication(B, A))
 }
-case class Axiom2(A: Formula, B: Formula, C: Formula) extends Formula {
+case class Axiom2(A: Formula, B: Formula, C: Formula) extends Axiom {
   def toFormula = Implication(
     Implication(A, Implication(B, C)),
     Implication(
@@ -21,7 +25,7 @@ case class Axiom2(A: Formula, B: Formula, C: Formula) extends Formula {
     )
   )
 }
-case class Axiom3(A: Formula, B: Formula) extends Formula {
+case class Axiom3(A: Formula, B: Formula) extends Axiom {
   def toFormula = Implication(
     Implication(Not(A), Not(B)),
     Implication(B, A)
@@ -101,36 +105,19 @@ object Main extends App {
           } else if (proven.contains(index2)) {
             proven(index2) match {
               // If it is the first axiom - check if the left side is what it should be
-              case a1: Axiom1 =>
-                if (a1.A == leftSide) {
-                  val res = Implication(a1.B, a1.A)
-                  iter(tail, proven + (iteration -> res), hypothesis, iteration + 1)
-                } else {
-                  stop(ModusPonens(index1, index2), proven, hypothesis)
-                }
-
-              // Check the same for the second axiom
-              case a2: Axiom2 =>
-                if (Implication(a2.A, Implication(a2.B, a2.C)) == leftSide) {
-                  val res = Implication(Implication(a2.A, a2.B), Implication(a2.A, a2.C))
-                  iter(tail, proven + (iteration -> res), hypothesis, iteration + 1)
-                } else {
-                  stop(ModusPonens(index1, index2), proven, hypothesis)
-                }
-
-              // Same for the third one
-              case a3: Axiom3 =>
-                if (Implication(Not(a3.A), Not(a3.B)) == leftSide) {
-                  val res = Implication(a3.B, a3.A)
-                  iter(tail, proven + (iteration -> res), hypothesis, iteration + 1)
-                } else {
-                  stop(ModusPonens(index1, index2), proven, hypothesis)
-                }
+              case a: Axiom if a.toFormula.A == leftSide =>
+                // The result is then the right side of the implication
+                val res = a.toFormula.B
+                iter(tail, proven + (iteration -> res), hypothesis, iteration+1)
 
               // If it is an implication - check if the left side is equal to `leftSide` and
               // add the right side to "proven" formulas
               case Implication(`leftSide`, b) =>
                 iter(tail, proven + (iteration -> b), hypothesis, iteration+1)
+
+              // If nothing matched -> stop
+              case _ =>
+                stop(ModusPonens(index1, index2), proven, hypothesis)
             }
           } else {
             println("proven and hypothesis do not contain " + index1)
