@@ -1,18 +1,8 @@
 package kdkocev.hilbert
 
-trait Formula {
-//  def customToString: String = this match {
-//    case F(x) => x.toString
-//    case Not(x) => s"¬$x"
-//    case Implication(x, y) => s"$x → $y"
-//    case Axiom1(x, y) => s"($x → ($y → $x))"
-//    case Axiom2(x, y, z) => s"(($x → ($y → $z)) → (($x → $y) → ($x → $z)))"
-//    case Axiom3(x, y) => s"(((¬$x) → (¬$y)) → ($y → $x))"
-//    case ModusPonens(_, Hypothesis(Implication(_, y))) => y.toString
-//    case ModusPonens(_, Axiom1(_, y)) => y.toString
-//    case Hypothesis(x) => x.toString
-//  }
-}
+import scala.annotation.tailrec
+
+trait Formula
 
 case class F(A: Symbol) extends Formula
 case class Not(A: Formula) extends Formula
@@ -38,18 +28,14 @@ case class Axiom3(A: Formula, B: Formula) extends Formula {
   )
 }
 
-// Hypothesis
 case class Hypothesis(A: Formula) extends Formula
-
-// Modus ponens
 case class ModusPonens(formulaLine1: Int, formulaLine2: Int) extends Formula
 
-// Proof system Г(S, R)
-// S = finite set of axiom scemata
-// R = finite set of proof rules
 
 object Main extends App {
+
   def prove(proof: List[Formula], required: Formula): Boolean = {
+    // Stop and return a feedback
     def stop(couldNotProve: Formula, proven: Map[Int, Formula], hypothesis: Map[Int, Formula]): Boolean = {
       println("could not prove", couldNotProve)
       println("proven", proven)
@@ -57,14 +43,18 @@ object Main extends App {
       false
     }
 
+    // tailrecursive function that does the calculation by matching over the list of formulas
+    @tailrec
     def iter(formulas: List[Formula], proven: Map[Int, Formula], hypothesis: Map[Int, Formula], iteration: Int): Boolean = {
       formulas match {
+        // If there are no more formulas to apply -> see if the required formula has been proven
         case Nil =>
-          proven.exists {
+          proven.contains{
             case (key, `required`) =>
               println("proven", proven)
               println("hypothesis", hypothesis)
               true
+
             case _ =>
               println("required formula not proven")
               println("proven", proven)
@@ -72,27 +62,41 @@ object Main extends App {
               false
           }
 
+        // If the current formula is an axiom - add it to the proven Map
         case (a1: Axiom1) :: tail => iter(tail, proven + (iteration -> a1.toFormula), hypothesis, iteration+1)
         case (a2: Axiom2) :: tail => iter(tail, proven + (iteration -> a2.toFormula), hypothesis, iteration+1)
         case (a3: Axiom3) :: tail => iter(tail, proven + (iteration -> a3.toFormula), hypothesis, iteration+1)
 
+        // If the current formula is a hypothesis - add it to hypothesis
+        case Hypothesis(a) :: tail =>
+          iter(tail, proven, hypothesis + (iteration -> a), iteration+1)
+
+        // if the current formula is modus ponens
         case ModusPonens(index1, index2) :: tail =>
+          // Check if the left side is something that we can find either in proven or hypothesis
           val leftSide = if(proven.contains(index1))
             proven(index1)
-          else
+          else if(hypothesis.contains(index1))
             hypothesis(index1)
+          else {
+            stop(ModusPonens(index1, index2), proven, hypothesis)
+          }
 
 
+          // If the right side is a hypothesis, check if it is an Implication
           if (hypothesis.contains(index2)) {
             hypothesis(index2) match {
               case Implication(`leftSide`, y) =>
                 iter(tail, proven + (iteration -> y), hypothesis, iteration + 1)
+
               case _ => stop(ModusPonens(index1, index2), proven, hypothesis)
             }
 
 
+          // If the right side is a proof - check if it is an axiom or an implication
           } else if (proven.contains(index2)) {
             proven(index2) match {
+              // If it is the first axiom - check if the left side is what it should be
               case a1: Axiom1 =>
                 if (a1.A == leftSide) {
                   val res = Implication(a1.B, a1.A)
@@ -100,6 +104,8 @@ object Main extends App {
                 } else {
                   stop(ModusPonens(index1, index2), proven, hypothesis)
                 }
+
+              // Check the same for the second axiom
               case a2: Axiom2 =>
                 if (Implication(a2.A, Implication(a2.B, a2.C)) == leftSide) {
                   val res = Implication(Implication(a2.A, a2.B), Implication(a2.A, a2.C))
@@ -107,6 +113,8 @@ object Main extends App {
                 } else {
                   stop(ModusPonens(index1, index2), proven, hypothesis)
                 }
+
+              // Same for the third one
               case a3: Axiom3 =>
                 if (Implication(Not(a3.A), Not(a3.B)) == leftSide) {
                   val res = Implication(a3.B, a3.A)
@@ -114,6 +122,9 @@ object Main extends App {
                 } else {
                   stop(ModusPonens(index1, index2), proven, hypothesis)
                 }
+
+              // If it is an implication - check if the left side is equal to `leftSide` and
+              // add the right side to "proven" formulas
               case Implication(`leftSide`, b) =>
                 iter(tail, proven + (iteration -> b), hypothesis, iteration+1)
             }
@@ -121,8 +132,6 @@ object Main extends App {
             println("proven and hypothesis do not contain " + index1)
             stop(ModusPonens(index1, index2), proven, hypothesis)
           }
-        case Hypothesis(a) :: tail =>
-          iter(tail, proven, hypothesis + (iteration -> a), iteration+1)
       }
     }
 
@@ -130,6 +139,7 @@ object Main extends App {
     iter(proof, Map(), Map(), 1)
   }
 
+  // Example proof that (not(D) -> C)) is correct in {A, (A->B), (B->C)}
   val step1 = Hypothesis(F('A))
   val step2 = Hypothesis(Implication(F('A), F('B)))
   val step3 = ModusPonens(1, 2)
