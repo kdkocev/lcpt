@@ -49,8 +49,7 @@ case class ModusPonens(formulaLine1: Int, formulaLine2: Int) extends Formula
 // R = finite set of proof rules
 
 object Main extends App {
-  // run forest, run
-  def run(proof: List[Formula]): Boolean = {
+  def prove(proof: List[Formula], required: Formula): Boolean = {
     def stop(couldNotProve: Formula, proven: Map[Int, Formula], hypothesis: Map[Int, Formula]): Boolean = {
       println("could not prove", couldNotProve)
       println("proven", proven)
@@ -61,14 +60,28 @@ object Main extends App {
     def iter(formulas: List[Formula], proven: Map[Int, Formula], hypothesis: Map[Int, Formula], iteration: Int): Boolean = {
       formulas match {
         case Nil =>
-          println("proven", proven)
-          println("hypothesis", hypothesis)
-          true
+          proven.exists {
+            case (key, `required`) =>
+              println("proven", proven)
+              println("hypothesis", hypothesis)
+              true
+            case _ =>
+              println("required formula not proven")
+              println("proven", proven)
+              println("hypothesis", hypothesis)
+              false
+          }
+
         case (a1: Axiom1) :: tail => iter(tail, proven + (iteration -> a1.toFormula), hypothesis, iteration+1)
         case (a2: Axiom2) :: tail => iter(tail, proven + (iteration -> a2.toFormula), hypothesis, iteration+1)
         case (a3: Axiom3) :: tail => iter(tail, proven + (iteration -> a3.toFormula), hypothesis, iteration+1)
+
         case ModusPonens(index1, index2) :: tail =>
-          val leftSide = if(proven.contains(index1)) proven(index1) else hypothesis(index1)
+          val leftSide = if(proven.contains(index1))
+            proven(index1)
+          else
+            hypothesis(index1)
+
 
           if (hypothesis.contains(index2)) {
             hypothesis(index2) match {
@@ -76,6 +89,8 @@ object Main extends App {
                 iter(tail, proven + (iteration -> y), hypothesis, iteration + 1)
               case _ => stop(ModusPonens(index1, index2), proven, hypothesis)
             }
+
+
           } else if (proven.contains(index2)) {
             proven(index2) match {
               case a1: Axiom1 =>
@@ -127,7 +142,7 @@ object Main extends App {
     step1, step2, step3, step4, step5, step6, step7
   )
 
-  val res = run(test)
+  val res = prove(test, Implication(Not(F('D)), F('A)))
 
   println(res)
 }
