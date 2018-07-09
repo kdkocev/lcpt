@@ -163,8 +163,17 @@ object Main extends App {
   /*
   Output when ran:
 
-  (proven,Map(3 -> F('B), 5 -> F('C), 6 -> Implication(F('C),Implication(Not(F('D)),F('C))), 7 -> Implication(Not(F('D)),F('C))))
-  (hypothesis,Map(1 -> F('A), 2 -> Implication(F('A),F('B)), 4 -> Implication(F('B),F('C))))
+  proven: Map(
+    3 -> F('B),
+    5 -> F('C),
+    6 -> Implication(F('C),Implication(Not(F('D)),F('C))),
+    7 -> Implication(Not(F('D)),F('C)))
+  )
+  hypothesis: Map(
+    1 -> F('A),
+    2 -> Implication(F('A),F('B)),
+    4 -> Implication(F('B),F('C)))
+  )
   true
 
    */
