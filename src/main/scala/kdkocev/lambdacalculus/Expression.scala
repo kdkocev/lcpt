@@ -2,6 +2,7 @@ package kdkocev.lambdacalculus
 
 trait Expression {
   def apply(f: Expression.Action): Expression = f(this)
+
   def isAlphaEquivalentTo(expr: Expression): Boolean = {
     import Expression._
     // TODO: make the possible variables an endless lazy-evaluated stream
@@ -112,36 +113,35 @@ case class Substitution2(find: Variable, replace: Expression) extends Expression
   }
 }
 
-// Rename the first occurrence of `find` to `replace`
 case class Renaming(find: Variable, replace: Variable) extends Expression.Action {
   def apply(expression: Expression): Expression = {
     import Expression._
-    def iter(expr: Expression, bound: List[Variable], renameInApplication: Boolean): Expression = expr match {
-      case `find` => if(bound.contains(find)) `replace` else `find`
-      case x: Variable if x != find => x
-      case Application(x, y) =>
-        // If the first occurrence of `find` hasnt been reached rename
-        // only one of the branches of the Application
-        if(renameInApplication) {
-          Application(iter(x, bound, renameInApplication), iter(y, bound, renameInApplication))
-        } else {
-          if(BV(x).contains(find)) {
-            Application(iter(x, bound, renameInApplication), y)
-          } else {
-            Application(x, iter(y, bound, renameInApplication))
-          }
-        }
+
+    // Replaces all occurences of find with replace blindly
+    // Even in the event (lx(lx.xy))[x to z] = (lz(lz.zy))
+    def replaceAll(expr: Expression, find: Variable, replace: Variable): Expression = expr match {
+      case `find` => `replace`
+      case y: Variable if y != `find` => y
+      case Application(m1, m2) =>
+        Application(replaceAll(m1, find, replace), replaceAll(m2, find, replace))
+      case Abstraction(`find`, body) => Abstraction(replace, replaceAll(body, find, replace))
+      case Abstraction(x, body) if x != find => Abstraction(x, replaceAll(body, find, replace))
+    }
+
+    def iter(expr: Expression): Expression = expr match {
+      case x: Variable => x
+      case Application(m1, m2) => Application(iter(m1), iter(m2))
       case Abstraction(`find`, body) =>
-        if(BV(expr).contains(replace)) {
-          throw new Exception(s"Cannot rename λ$find.$expr[$find -> $replace]")
+        // The `replace` is a variable in the body of an abstraction over `find`
+        if(V(body).contains(`replace`)) {
+          throw new Exception(s"Cannot rename $find to $replace in $body")
         }
-        // Start renaming all branches of applications
-        Abstraction(`replace`, iter(body, find :: bound, true))
-      case Abstraction(head, body) if head != find => Abstraction(head, iter(body, bound, renameInApplication))
+
+        Abstraction(replace, replaceAll(body, find, replace))
+      case Abstraction(x, body) if x != find =>
+        Abstraction(x, iter(body))
     }
-    if(FV(expression).contains(replace)) {
-      throw new Exception(s"Cannot rename $expression[$find -> $replace]")
-    }
-    iter(expression, Nil, false)
+
+    iter(expression)
   }
 }

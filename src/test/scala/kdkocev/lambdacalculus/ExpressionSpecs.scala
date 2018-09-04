@@ -74,6 +74,9 @@ class ExpressionSpecs extends Specification {
         "λxλy.x[x to z] == λzλy.z" in {
           lam('x, lam('y, 'x))('x to 'z) mustEqual lam('z, lam('y, 'z))
         }
+        "λxλy.x[t to z] == λxλy.x" in {
+          lam('x, lam('y, 'x))('t to 'z) mustEqual lam('x, lam('y, 'x))
+        }
         "λyλx.y[x to z] == λyλz.y" in {
           lam('y, lam('x, 'y))('x to 'z) mustEqual lam('y, lam('z, 'y))
         }
@@ -89,6 +92,10 @@ class ExpressionSpecs extends Specification {
         "λy.xy[x to z] == λy.xy (not changed)" in {
           val expr = lam('y, app('x, 'y))
           expr('x to 'z) mustEqual expr
+        }
+        "(λx.xy)(λx.xy)[x to z] == (λz.zy)(λz.zy)" in {
+          val expr = app(lam('x, app('x, 'y)), lam('x, app('x, 'y)))
+          expr('x to 'z) mustEqual app(lam('z, app('z, 'y)), lam('z, app('z, 'y)))
         }
       }
     }
