@@ -3,31 +3,31 @@ package kdkocev.lambdacalculus
 trait Expression {
   def apply(f: Expression.Action): Expression = f(this)
 
-  def isAlphaEquivalentTo(expr: Expression): Boolean = {
-    import Expression._
-    // TODO: make the possible variables an endless lazy-evaluated stream
-    // All the characters are enough for our purposes
-    val possibleVariables = ('a' to 'z').map(x => Variable(Symbol(x.toString))).toSet
+  // Important: See tests for documentation
+  def normalize: Expression = {
+    def iter(expr: Expression): (Expression, Int) = expr match {
+      case x: Variable => (x, 0)
 
-    // Rename all the bound variables
-    val valuesToRenameWith = ((possibleVariables diff V(this).toSet) diff V(expr).toSet)
-      .toList
-      .sortBy(v => v.s.toString)
+      case Application(m1, m2) =>
+        val (p1, n1) = iter(m1)
+        val (p2, n2) = iter(m2)
+        (Application(p1, p2), Math.max(n1, n2))
 
-    val valuesToRenameExpr1 = BV(this)
-    val renamedBV1 = valuesToRenameExpr1.zip(valuesToRenameWith).foldLeft(this){
-      case (ex, (find, replace)) => ex(find to replace)
+      case Abstraction(x, body) =>
+        val (p, n) = iter(body)
+        // Substitute x with n in the body
+        val symbolToReplaceWith = Variable(Symbol(n.toString))
+        val res = Abstraction(x, p)(Renaming(x, symbolToReplaceWith))
+        (res, n + 1)
     }
 
-    val valuesToRenameExpr2 = BV(expr)
-    val renamedBV2 = valuesToRenameExpr2.zip(valuesToRenameWith).foldLeft(expr){
-      case (ex, (find, replace)) => ex(find to replace)
-    }
-
-    renamedBV1 == renamedBV2
+    iter(this)._1
   }
 
+  def isAlphaEquivalentTo(expr: Expression): Boolean = this.normalize == expr.normalize
+
   def <=> : (Expression => Boolean) = isAlphaEquivalentTo
+  def =:= : (Expression => Boolean) = isAlphaEquivalentTo
 }
 object Expression {
   type Action = (Expression => Expression)

@@ -122,5 +122,89 @@ class ExpressionSpecs extends Specification {
         }
       }
     }
+
+    "Alpha equivalence α=" in {
+      "normalize" in {
+
+        "λx.λx.x normalize == λ1.λ0.0" in {
+          val expr = lam('x, lam('x,'x))
+          val result = lam(Symbol("1"), lam(Symbol("0"), Symbol("0")))
+          expr.normalize mustEqual result
+        }
+        "λy.λx.x normalize == λ1.λ0.0" in {
+          val expr = lam('x, lam('x,'x))
+          val result = lam(Symbol("1"), lam(Symbol("0"), Symbol("0")))
+          expr.normalize mustEqual result
+        }
+        "λx.λy.z normalize == λ1.λ0.z" in {
+          val expr = lam('x, lam('y, 'z))
+          val result = lam(Symbol("1"), lam(Symbol("0"), 'z))
+          expr.normalize mustEqual result
+        }
+        "y(λx.λz.tx)(λy.λx.y(λz.λy.zty)(λd.d)) normalize == y(λ1.λ0.0t)(λ3.λ2.3(λ1.λ0.103)(λ0.0))" in {
+          val expr = app(
+            app(
+              'y,
+              lam('x, lam('z, app('t, 'x)))
+            ),
+            lam('y,
+              lam('x,
+                app(
+                  app('y,
+                    lam('z,
+                      lam('y, app(app('z, 't), 'y))
+                    )
+                  ),
+                  lam('d, 'd)
+                )
+              )
+            )
+          )
+
+          val result = app(
+            app(
+              'y,
+              lam(Symbol("1"), lam(Symbol("0"), app('t, Symbol("1"))))
+            ),
+            lam(Symbol("3"),
+              lam(Symbol("2"),
+                app(
+                  app(Symbol("3"),
+                    lam(Symbol("1"),
+                      lam(Symbol("0"), app(app(Symbol("1"), 't), Symbol("0")))
+                    )
+                  ),
+                  lam(Symbol("0"), Symbol("0"))
+                )
+              )
+            )
+          )
+
+          expr.normalize mustEqual result
+        }
+
+      }
+      "λx.λx.x =a= λy.λy.y" in {
+        val expr = lam('x, lam('x,'x))
+        val result = lam('y, lam('y, 'y))
+        expr =:= result mustEqual true
+      }
+      "λy.λx.x =a= λy.λy.y" in {
+        val expr = lam('x, lam('x,'x))
+        val result = lam('y, lam('y, 'y))
+        expr =:= result mustEqual true
+      }
+      "λx.λy.y =a= λy.λx.x" in {
+        val expr = lam('x, lam('y,'y))
+        val result = lam('y, lam('x, 'x))
+        expr =:= result mustEqual true
+      }
+      "λx.λy.z =a= λy.λy.z" in {
+        val expr = lam('x, lam('y, 'z))
+        val result = lam('y, lam('y, 'z))
+        expr =:= result mustEqual true
+      }
+
+    }
   }
 }
