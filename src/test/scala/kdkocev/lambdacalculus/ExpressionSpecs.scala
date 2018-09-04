@@ -206,5 +206,60 @@ class ExpressionSpecs extends Specification {
       }
 
     }
+    "Substitution" in {
+      import Expression._
+      "x[x -> y] := y" in {
+        Variable('x)('x -> 'y) =:= Variable('y) mustEqual true
+      }
+      "x[x -> λy.y] := λy.y" in {
+        Variable('x)('x -> lam('y, 'y)) =:= lam('y, 'y) mustEqual true
+      }
+      "x[x -> yx] := yx" in {
+        Variable('x)('x -> app('y, 'x)) =:= app('y, 'x) mustEqual true
+      }
+      "λx.x[x -> y] := λx.x" in {
+        lam('x, 'x)('x -> 'y) =:= lam('x, 'x) mustEqual true
+      }
+      "λx.xy[y -> t] := λx.xt" in {
+        lam('x, app('x, 'y))('y -> 't) =:= lam('x, app('x, 't)) mustEqual true
+      }
+      "λx.xy[y -> x] := λz.zx RENAME" in {
+        lam('x, app('x, 'y))('y -> 'x) =:= lam('z, app('z, 'x)) mustEqual true
+      }
+      "(λx.x)(λy.y)[z -> t] := (λx.x)(λy.y)" in {
+        val expr = app(lam('x, 'x),lam('y, 'y))
+
+        expr('z -> 't) =:= expr mustEqual true
+      }
+      "(λx.xy)y[y -> λx.x] := (λx.x(λx.x))(λx.x)" in {
+        val expr = app(lam('x, app('x, 'y)), 'y)
+        val result = app(lam('x, app('x, lam('x, 'x))), lam('x, 'x))
+
+        expr('y -> lam('x, 'x)) =:= result mustEqual true
+      }
+      "(λx.xy)(λy.y)yx[y -> x] := (λy.yx)(λy.y)xx RENAME" in {
+        val expr = app(
+          app(
+            app(
+              lam('x, app('x, 'y)),
+              lam('y, 'y)
+            ),
+            'y
+          ),
+          'x
+        )
+        val result = app(
+          app(
+            app(
+              lam('y, app('y, 'x)),
+              lam('y, 'y)
+            ),
+            'x
+          ),
+          'x
+        )
+        expr('y -> 'x) =:= result mustEqual true
+      }
+    }
   }
 }
