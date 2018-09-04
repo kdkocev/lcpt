@@ -97,6 +97,18 @@ class ExpressionSpecs extends Specification {
           val expr = app(lam('x, app('x, 'y)), lam('x, app('x, 'y)))
           expr('x to 'z) mustEqual app(lam('z, app('z, 'y)), lam('z, app('z, 'y)))
         }
+        "λx.λx.x[x to y] == λy.λy.y" in {
+          val expr = lam('x, lam('x,'x))
+          expr('x to 'y) mustEqual lam('y, lam('y, 'y))
+        }
+        "λy.λx.x[x to y] == λy.λy.y" in {
+          val expr = lam('y, lam('x,'x))
+          expr('x to 'y) mustEqual lam('y, lam('y, 'y))
+        }
+        "λx.λy.x[x to y] == λx.λy.x EXCEPTION" in {
+          val expr = lam('x, lam('y,'x))
+          expr('x to 'y) must throwAn[Exception]
+        }
       }
     }
     "Substitution [x -> y]" in {
