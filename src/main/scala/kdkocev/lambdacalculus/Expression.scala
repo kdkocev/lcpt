@@ -5,6 +5,7 @@ trait Expression {
 
   // Important: See tests for documentation
   def normalize: Expression = {
+    import Expression._
     def iter(expr: Expression): (Expression, Int) = expr match {
       case x: Variable => (x, 0)
 
@@ -21,7 +22,23 @@ trait Expression {
         (res, n + 1)
     }
 
-    iter(this)._1
+    // Rename variables with symbols that are among the numbers we're going to rename with later
+    // TL;DR: find variables with name that is digit between 0 and variables.size. rename them
+    val variables = V(this)
+    val digitVariables = variables.filter(x => x.s.name.forall(c => c.isDigit))
+
+    if(digitVariables.nonEmpty) {
+      val maxNumber = digitVariables.map(_.s.name).max
+
+      val expr = digitVariables.zipWithIndex.foldLeft(this) {
+        case (res, (x, currentIndex)) =>
+          res(Renaming(x, Symbol(maxNumber + currentIndex)))
+      }
+
+      iter(expr)._1
+    } else {
+      iter(this)._1
+    }
   }
 
   def isAlphaEquivalentTo(expr: Expression): Boolean = this.normalize == expr.normalize
@@ -75,21 +92,21 @@ case class Abstraction(v: Variable, body: Expression) extends Expression
 case class Substitution(find: Variable, replace: Expression) extends Expression.Action {
   def apply(expression: Expression): Expression = {
     import Expression._
-    def iter(expr: Expression): Expression = expr match {
+    def iter(expr: Expression, symbolToReplaceWith: Int): Expression = expr match {
       case `find` => replace
       case y: Variable => y
-      case Application(x, y) => Application(iter(x), iter(y))
+      case Application(x, y) => Application(iter(x, symbolToReplaceWith), iter(y, symbolToReplaceWith))
       case Abstraction(`find`, body) => Abstraction(find, body)
       case Abstraction(head, body) =>
+        // Rename values if needed
         if(FV(replace).contains(head)) {
-          // Throwing an exception instead of returning an Option because this should
-          // break the program execution instead of silently failing
-          throw new Exception(s"Substitution($find, $replace) not defined for $body")
+          val renamedBody = Abstraction(head, body)(Renaming(head, Symbol(symbolToReplaceWith.toString)))
+          iter(renamedBody, symbolToReplaceWith + 1)
         } else {
-          Abstraction(head, iter(body))
+          Abstraction(head, iter(body, symbolToReplaceWith))
         }
     }
-    iter(expression)
+    iter(expression, 0)
   }
 }
 

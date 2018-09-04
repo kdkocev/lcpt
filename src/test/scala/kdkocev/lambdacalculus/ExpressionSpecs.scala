@@ -111,17 +111,6 @@ class ExpressionSpecs extends Specification {
         }
       }
     }
-    "Substitution [x -> y]" in {
-      val l1 = lam('x, 'x)
-      "substitute free variables" in {
-        "x[x -> λy.y] == λy.y" in {
-          Variable('x)('x -> l1) mustEqual l1
-        }
-        "(λx.x)(λy.x)[x -> z] == (λx.x)(λy.z)" in {
-          app(lam('x, 'x), lam('y, 'x))('x -> 'z) mustEqual app(lam('x, 'x), lam('y, 'z))
-        }
-      }
-    }
 
     "Alpha equivalence α=" in {
       "normalize" in {
@@ -129,6 +118,21 @@ class ExpressionSpecs extends Specification {
         "λx.λx.x normalize == λ1.λ0.0" in {
           val expr = lam('x, lam('x,'x))
           val result = lam(Symbol("1"), lam(Symbol("0"), Symbol("0")))
+          expr.normalize mustEqual result
+        }
+        "λ0.λx.x normalize == λ1.λ0.0" in {
+          val expr = lam(Symbol("0"), lam('x, 'x))
+          val result = lam(Symbol("1"), lam(Symbol("0"), Symbol("0")))
+          expr.normalize mustEqual result
+        }
+        "λ0.λx.x0 normalize == λ1.λ0.01" in {
+          val expr = lam(Symbol("0"), lam('x, app('x, Symbol("0"))))
+          val result = lam(Symbol("1"), lam(Symbol("0"), app(Symbol("0"), Symbol("1"))))
+          expr.normalize mustEqual result
+        }
+        "λ0.λ4.xy" in {
+          val expr = lam(Symbol("0"), lam(Symbol("4"), app('x, 'y)))
+          val result = lam(Symbol("1"), lam(Symbol("0"), app('x, 'y)))
           expr.normalize mustEqual result
         }
         "λy.λx.x normalize == λ1.λ0.0" in {
@@ -223,7 +227,7 @@ class ExpressionSpecs extends Specification {
       "λx.xy[y -> t] := λx.xt" in {
         lam('x, app('x, 'y))('y -> 't) =:= lam('x, app('x, 't)) mustEqual true
       }
-      "λx.xy[y -> x] := λz.zx RENAME" in {
+      "λx.xy[y -> x] := λ0.0x RENAME" in {
         lam('x, app('x, 'y))('y -> 'x) =:= lam('z, app('z, 'x)) mustEqual true
       }
       "(λx.x)(λy.y)[z -> t] := (λx.x)(λy.y)" in {
@@ -237,7 +241,7 @@ class ExpressionSpecs extends Specification {
 
         expr('y -> lam('x, 'x)) =:= result mustEqual true
       }
-      "(λx.xy)(λy.y)yx[y -> x] := (λy.yx)(λy.y)xx RENAME" in {
+      "(λx.xy)(λy.y)yx[y -> x] := (λ0.0x)(λy.y)xx RENAME" in {
         val expr = app(
           app(
             app(
@@ -259,6 +263,14 @@ class ExpressionSpecs extends Specification {
           'x
         )
         expr('y -> 'x) =:= result mustEqual true
+      }
+      "(λx.xy)y[y -> (λx.x)x] := (λ0.0(λx.x)x)(λx.x)x RENAME" in {
+        val expr = app(lam('x, app('x, 'y)), 'y)
+        val result = app(lam(Symbol("0"), app(Symbol("0"), app(lam('x, 'x), 'x))), app(lam('x, 'x), 'x))
+
+        expr('y -> app(lam('x, 'x), 'x)) mustEqual result
+
+        expr('y -> app(lam('x, 'x), 'x)) =:= result mustEqual true
       }
     }
   }
