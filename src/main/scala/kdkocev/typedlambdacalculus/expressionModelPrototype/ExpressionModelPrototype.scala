@@ -1,8 +1,8 @@
 package kdkocev.typedlambdacalculus.expressionModelPrototype
 
 trait Expression
-trait UExpression
-trait TExpression
+trait UExpression extends Expression
+trait TExpression extends Expression
 
 trait Variable
 case class UVar(s: Symbol) extends Variable with UExpression
