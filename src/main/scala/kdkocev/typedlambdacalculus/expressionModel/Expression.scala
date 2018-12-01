@@ -17,12 +17,3 @@ final case class UAbs(override val arg: Variable, override val body: Expression)
 final case class TAbs(override val arg: TVar, override val body: TExpression, override val  t: Type) extends Abstraction with TExpression
 
 case class Constant(s: Symbol, override val t: Type) extends TExpression
-
-object Main extends App {
-
-  val v: TExpression = TVar('s, Nothing)
-  val ap: TExpression = TApp(v, v, Nothing)
-  val ab: TExpression = TAbs(TVar('s, Nothing), ap, Nothing)
-
-  println("success")
-}
