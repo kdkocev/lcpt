@@ -37,6 +37,15 @@ trait Expression {
     case Application(e1, e2) => bound ++ e1.boundVariables(Set()) ++ e2.boundVariables(Set())
     case Abstraction(v, b) => b.boundVariables(bound + v)
   }
+
+  def substitute(from: Variable, to: Expression): Expression =
+    Expression.substitution(this, from, to)
+
+  def rename(from: Symbol, to: Symbol): Expression =
+    Expression.rename(this, from, to)
+
+  def isAlphaEquivalent(other: Expression): Boolean =
+    Expression.areAlphaEquivalent(this, other)
 }
 
 object Expression {
@@ -128,6 +137,17 @@ object Expression {
 
     e1Renamed == e2Renamed
   }
+
+  def betaReduce(expression: Expression): Expression = expression match {
+    case x: Variable => x
+    case Application(Abstraction(v, b), e2) if v.typ == e2.typ => betaReduce(Expression.substitution(b, v, e2))
+    case Application(Abstraction(v, b), e2) if v.typ != e2.typ => throw new Error(s"Type mismatch in expression $expression. Expected ${v.typ} but found ${e2.typ}")
+    // This constraint is removed for testing purposes
+    // case Application(e1, e2) => throw new Error(s"Tried to apply $e2 to $e1 but the second one is not an abstraction.")
+    // This constraint should be removed after testing
+    case Application(e1, e2) => Application(betaReduce(e1), betaReduce(e2))
+    case Abstraction(v, b) => Abstraction(v, betaReduce(b))
+  }
 }
 
 case class Variable(symbol: Symbol, t: Type) extends Expression
@@ -185,4 +205,7 @@ object Main extends App {
 //    Expression.substitution(Abstraction(z, Application(z, x)), x, y)
 //  )
 //  print(test5)
+
+  val test6 = Expression.betaReduce(Application(Abstraction(x, x), Abstraction(y, y)))
+  println(test6)
 }
