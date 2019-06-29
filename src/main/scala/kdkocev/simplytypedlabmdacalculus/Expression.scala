@@ -5,8 +5,6 @@ case class To[T1 <: Type, T2 <: Type](t1: T1, t2: T2) extends Type {
   override def toString: String = s"($t1 -> $t2)"
 }
 
-//trait Rec extends To[Rec, Rec]
-
 trait Expression {
   def typ: Type = this match {
     case v: Variable => v.t
@@ -46,6 +44,9 @@ trait Expression {
 
   def isAlphaEquivalent(other: Expression): Boolean =
     Expression.areAlphaEquivalent(this, other)
+
+  def betaReduce(): Expression =
+    Expression.betaReduce(this)
 }
 
 object Expression {
@@ -148,64 +149,86 @@ object Expression {
     case Application(e1, e2) => Application(betaReduce(e1), betaReduce(e2))
     case Abstraction(v, b) => Abstraction(v, betaReduce(b))
   }
+
+  // Returns a list of errors
+  def typeCheck(expression: Expression): List[String] = {
+    def iter(expr: Expression, errors: List[String]): List[String] = expr match {
+      case _: Variable => errors
+      case Application(Abstraction(v, b), e2) if v.typ == e2.typ => errors ++ iter(b, Nil) ++ iter(e2, Nil)
+      case Application(Abstraction(v, b), e2) if v.typ != e2.typ => errors ++ List(s"Expected ${v.typ} to equal ${e2.typ}") ++ iter(b, Nil) ++ iter(e2, Nil)
+//      case Application(e1, e2) if e1.isInstanceOf[To[_,_]] && e1.asInstanceOf[To[_,_]].t1 == e2.typ => errors ++ iter(e1, Nil) ++ iter(e2, Nil)
+//      case Application(e1, e2) if !e1.typ.isInstanceOf[To[_,_]] => errors ++ List(s"Tried to apply $e2 to $e1 but types are incompatible") ++ iter(e1, Nil) ++ iter(e2, Nil)
+      case Application(e1, e2) => e1.typ match {
+        case To(t1, _) if t1 == e2.typ => errors ++ iter(e1, Nil) ++ iter(e2, Nil)
+        case _ => errors ++ List(s"Tried to apply ${e2.typ} to ${e1.typ} but types are incompatible") ++ iter(e1, Nil) ++ iter(e2, Nil)
+      }
+      case Abstraction(_, b) => iter(b, errors)
+    }
+
+    iter(expression, Nil)
+  }
 }
 
 case class Variable(symbol: Symbol, t: Type) extends Expression
-
 case class Application(e1: Expression, e2: Expression) extends Expression
-
 case class Abstraction(v: Variable, body: Expression) extends Expression
 
 object Main extends App {
+
   object Sigma extends Type {
     override def toString: String = "σ"
   }
-//  val R = new Rec{}
-
 
   val x = Variable('x, Sigma)
   val y = Variable('y, Sigma)
   val z = Variable('z, Sigma)
 
   val abs1 = Abstraction(x, x)
-//  println(abs1.typ) // (σ -> σ)
+  //  println(abs1.typ) // (σ -> σ)
 
   val app1 = Application(abs1, y)
-//  println(app1.typ) // σ
+  //  println(app1.typ) // σ
 
   val abs2 = Abstraction(Variable('x, To(Sigma, Sigma)), Application(Variable('x, To(Sigma, Sigma)), y))
-//  println(abs2.typ)
+  //  println(abs2.typ)
 
-//  val freevartest1 = Abstraction(x, Application(Application(Abstraction(y, y), y), Variable('t, Sigma)))
-//  println(freevartest1.boundVariables())
-//  println(freevartest1.freeVariables())
-//  println(freevartest1.allVariables())
+  //  val freevartest1 = Abstraction(x, Application(Application(Abstraction(y, y), y), Variable('t, Sigma)))
+  //  println(freevartest1.boundVariables())
+  //  println(freevartest1.freeVariables())
+  //  println(freevartest1.allVariables())
 
 
-//  val test1 = Expression.substitution(Abstraction(z, Application(x, Abstraction(y, x))), x, y)
-//  println(test1)
+  //  val test1 = Expression.substitution(Abstraction(z, Application(x, Abstraction(y, x))), x, y)
+  //  println(test1)
 
-//    val test2 = Expression.rename(Abstraction(x, Application(Abstraction(z, z), y)), z.symbol, y.symbol)
-//    val test2 = Expression.rename(Abstraction(x, Application(x, y)), x.symbol, y.symbol)
-//    println(test2)
+  //    val test2 = Expression.rename(Abstraction(x, Application(Abstraction(z, z), y)), z.symbol, y.symbol)
+  //    val test2 = Expression.rename(Abstraction(x, Application(x, y)), x.symbol, y.symbol)
+  //    println(test2)
 
-//  val zero = Variable(Symbol("0"), Sigma)
-//  val one = Variable(Symbol("1"), Sigma)
-//  val test3 = Expression.areAlphaEquivalent(
-//    Application(Abstraction(one, one), x),
-//    Application(Abstraction(zero, zero), x)
-//  )
-//  println(test3)
+  //  val zero = Variable(Symbol("0"), Sigma)
+  //  val one = Variable(Symbol("1"), Sigma)
+  //  val test3 = Expression.areAlphaEquivalent(
+  //    Application(Abstraction(one, one), x),
+  //    Application(Abstraction(zero, zero), x)
+  //  )
+  //  println(test3)
 
-//  val test4 = Expression.rename(Abstraction(x, Abstraction(y, Abstraction(y, Application(x, Abstraction(x, x))))), x.symbol, z.symbol)
-//  print(test4)
+  //  val test4 = Expression.rename(Abstraction(x, Abstraction(y, Abstraction(y, Application(x, Abstraction(x, x))))), x.symbol, z.symbol)
+  //  print(test4)
 
-//  val test5 = Expression.areAlphaEquivalent(
-//    Abstraction(x, Application(x, y)),
-//    Expression.substitution(Abstraction(z, Application(z, x)), x, y)
-//  )
-//  print(test5)
+  //  val test5 = Expression.areAlphaEquivalent(
+  //    Abstraction(x, Application(x, y)),
+  //    Expression.substitution(Abstraction(z, Application(z, x)), x, y)
+  //  )
+  //  print(test5)
 
-  val test6 = Expression.betaReduce(Application(Abstraction(x, x), Abstraction(y, y)))
-  println(test6)
+  //  val test6 = Expression.betaReduce(Application(Abstraction(x, x), Abstraction(y, y)))
+  //  println(test6)
+
+  //  val test7 = Expression.typeCheck(Application(Abstraction(Variable('u, To(Sigma, Sigma)), Application(Variable('u, To(Sigma, Sigma)), z)), Abstraction(x, x)))
+  //  println(test7)
+
+  //  val test8 = Expression.typeCheck(Application(Abstraction(Variable('u, To(Sigma, Sigma)), Application(Variable('u, To(Sigma, Sigma)), Variable('k, To(Sigma, Sigma)))), Abstraction(x, x)))
+  //  println(test8)
+
 }
