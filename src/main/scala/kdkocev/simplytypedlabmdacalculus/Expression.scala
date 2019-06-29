@@ -37,7 +37,7 @@ trait Expression {
   }
 
   def substitute(from: Variable, to: Expression): Expression =
-    Expression.substitution(this, from, to)
+    Expression.softSubstitution(this, from, to)
 
   def rename(from: Symbol, to: Symbol): Expression =
     Expression.rename(this, from, to)
@@ -51,9 +51,29 @@ trait Expression {
 
 object Expression {
   // TODO make it so the substitution makes valid renamings instead of throwing an error.
-  def substitution(e: Expression, from: Variable, to: Expression): Expression = {
+  def softSubstitution(e: Expression, from: Variable, to: Expression): Expression = {
     if(from.typ != to.typ) {
       throw new Error("Cannot do substitution")
+    } else {
+      e match {
+        case v: Variable if v == from => to
+        case v: Variable if v != from => v
+        case Application(e1, e2) => Application(softSubstitution(e1, from, to), softSubstitution(e2, from, to))
+        case Abstraction(v, b) if v == from => Abstraction(v, b)
+        case Abstraction(v, b) if v != from =>
+          if(to.freeVariables().contains(v)) {
+            // TODO: do valid renaming and complete the substitution
+            throw new Error(s"Cannot substitute $from with $to in $b because $v is free in $to")
+          } else {
+            Abstraction(v, softSubstitution(b, from, to))
+          }
+      }
+    }
+  }
+
+  def substitution(e: Expression, from: Variable, to: Expression): Expression = {
+    if(from.typ != to.typ) {
+      throw new Error("Cannot do the substitution")
     } else {
       e match {
         case v: Variable if v == from => to
@@ -62,8 +82,17 @@ object Expression {
         case Abstraction(v, b) if v == from => Abstraction(v, b)
         case Abstraction(v, b) if v != from =>
           if(to.freeVariables().contains(v)) {
-            // TODO: do valid renaming and complete the substitution
-            throw new Error(s"Cannot substitute $from with $to in $b because $v is free in $to")
+            // Find the biggest number amongst the variable names and increment it by 1
+            val newVal: Int = b.allVariables().filter(p =>
+              p.symbol.name.forall(c => c.isDigit)
+            ).foldLeft(-1)((max, f) =>
+              if(max > f.symbol.name.toInt)
+                max
+              else
+                f.symbol.name.toInt
+            ) + 1
+
+            substitution(rename(Abstraction(v, b), v.symbol, Symbol(newVal.toString)), from, to)
           } else {
             Abstraction(v, substitution(b, from, to))
           }
@@ -105,7 +134,7 @@ object Expression {
         } else {
           Abstraction(
             Variable(to, v.t),
-            Expression.substitution(body, Variable(from, v.t), Variable(to, v.t))
+            Expression.softSubstitution(body, Variable(from, v.t), Variable(to, v.t))
           )
         }
     }
@@ -141,7 +170,7 @@ object Expression {
 
   def betaReduce(expression: Expression): Expression = expression match {
     case x: Variable => x
-    case Application(Abstraction(v, b), e2) if v.typ == e2.typ => betaReduce(Expression.substitution(b, v, e2))
+    case Application(Abstraction(v, b), e2) if v.typ == e2.typ => betaReduce(Expression.softSubstitution(b, v, e2))
     case Application(Abstraction(v, b), e2) if v.typ != e2.typ => throw new Error(s"Type mismatch in expression $expression. Expected ${v.typ} but found ${e2.typ}")
     // This constraint is removed for testing purposes
     // case Application(e1, e2) => throw new Error(s"Tried to apply $e2 to $e1 but the second one is not an abstraction.")
@@ -205,8 +234,8 @@ object Main extends App {
   //    val test2 = Expression.rename(Abstraction(x, Application(x, y)), x.symbol, y.symbol)
   //    println(test2)
 
-  //  val zero = Variable(Symbol("0"), Sigma)
-  //  val one = Variable(Symbol("1"), Sigma)
+    val zero = Variable(Symbol("0"), Sigma)
+    val one = Variable(Symbol("1"), Sigma)
   //  val test3 = Expression.areAlphaEquivalent(
   //    Application(Abstraction(one, one), x),
   //    Application(Abstraction(zero, zero), x)
@@ -231,4 +260,6 @@ object Main extends App {
   //  val test8 = Expression.typeCheck(Application(Abstraction(Variable('u, To(Sigma, Sigma)), Application(Variable('u, To(Sigma, Sigma)), Variable('k, To(Sigma, Sigma)))), Abstraction(x, x)))
   //  println(test8)
 
+  val test9 = Expression.substitution(Abstraction(one, Application(one, x)), x, one)
+  println(test9)
 }
