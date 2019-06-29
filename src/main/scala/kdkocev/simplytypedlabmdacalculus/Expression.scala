@@ -100,27 +100,25 @@ object Expression {
     }
   }
 
-  // Renaming of *bound variables* only. Free variables are left as they are
-  // TODO: make sure that expressions are alpha equivalent after renaming
   def rename(expression: Expression, from: Symbol, to: Symbol): Expression = {
     // All pattern matches checks are explicit so they don't depend on ordering
 
     // Iterating without using substitution
-    def iter_version1(expr: Expression, isBound: Boolean): Expression = expr match {
+    def iterWoSubs(expr: Expression, isBound: Boolean): Expression = expr match {
       case x: Variable if x.symbol == from && isBound => Variable(to, x.t)
       case x: Variable if x.symbol != from || !isBound => x
-      case Application(e1, e2) => Application(iter_version1(e1, isBound), iter_version1(e2, isBound))
+      case Application(e1, e2) => Application(iterWoSubs(e1, isBound), iterWoSubs(e2, isBound))
       case Abstraction(v, body) if v.symbol == to && isBound =>
         throw new Exception(s"Trying to rename $from to $to in $expr but $to is found in a bound position")
 
-      case Abstraction(v, body) if v.symbol != from => Abstraction(v, iter_version1(body, isBound))
+      case Abstraction(v, body) if v.symbol != from => Abstraction(v, iterWoSubs(body, isBound))
       case abs@Abstraction(v, body) if v.symbol == from =>
 
         if(abs.freeVariables().exists(v => v.symbol == to)) {
           throw new Error(s"Cannot rename $from with $to in $abs because $to is free in $expression")
         }
 
-        Abstraction(Variable(to, v.t), iter_version1(body, true))
+        Abstraction(Variable(to, v.t), iterWoSubs(body, true))
     }
 
     // We use substitution in this case
@@ -144,8 +142,6 @@ object Expression {
   }
 
   def areAlphaEquivalent(e1: Expression, e2: Expression): Boolean = {
-    // use only renaming of bound variables in both expressions and turn them into the same expression
-
     def iter(expr: Expression, excludedVariables: Set[Variable], bound: Set[Variable], iteration: Int): Expression = {
       // If the "iteration" number exists as a variable - increment it
       if(excludedVariables.exists(v => v.symbol == Symbol(iteration.toString))) {
@@ -172,9 +168,8 @@ object Expression {
     case x: Variable => x
     case Application(Abstraction(v, b), e2) if v.typ == e2.typ => betaReduce(Expression.softSubstitution(b, v, e2))
     case Application(Abstraction(v, b), e2) if v.typ != e2.typ => throw new Error(s"Type mismatch in expression $expression. Expected ${v.typ} but found ${e2.typ}")
-    // This constraint is removed for testing purposes
+    // This constraint is relaxed
     // case Application(e1, e2) => throw new Error(s"Tried to apply $e2 to $e1 but the second one is not an abstraction.")
-    // This constraint should be removed after testing
     case Application(e1, e2) => Application(betaReduce(e1), betaReduce(e2))
     case Abstraction(v, b) => Abstraction(v, betaReduce(b))
   }
@@ -185,8 +180,6 @@ object Expression {
       case _: Variable => errors
       case Application(Abstraction(v, b), e2) if v.typ == e2.typ => errors ++ iter(b, Nil) ++ iter(e2, Nil)
       case Application(Abstraction(v, b), e2) if v.typ != e2.typ => errors ++ List(s"Expected ${v.typ} to equal ${e2.typ}") ++ iter(b, Nil) ++ iter(e2, Nil)
-//      case Application(e1, e2) if e1.isInstanceOf[To[_,_]] && e1.asInstanceOf[To[_,_]].t1 == e2.typ => errors ++ iter(e1, Nil) ++ iter(e2, Nil)
-//      case Application(e1, e2) if !e1.typ.isInstanceOf[To[_,_]] => errors ++ List(s"Tried to apply $e2 to $e1 but types are incompatible") ++ iter(e1, Nil) ++ iter(e2, Nil)
       case Application(e1, e2) => e1.typ match {
         case To(t1, _) if t1 == e2.typ => errors ++ iter(e1, Nil) ++ iter(e2, Nil)
         case _ => errors ++ List(s"Tried to apply ${e2.typ} to ${e1.typ} but types are incompatible") ++ iter(e1, Nil) ++ iter(e2, Nil)
