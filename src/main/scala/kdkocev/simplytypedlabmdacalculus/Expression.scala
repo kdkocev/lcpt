@@ -40,17 +40,6 @@ trait Expression {
 }
 
 object Expression {
-  def alphaEquivalence(e1: Expression, e2: Expression): Boolean = {
-    (e1, e2) match {
-      case (Variable(v1, t1), Variable(v2, t2)) if t1 == t2 => true
-      case (app1: Application, app2: Application) => alphaEquivalence(app1.e1, app2.e1) && alphaEquivalence(app1.e2, app2.e2)
-      case (abs1: Abstraction, abs2: Abstraction) =>
-        // TODO: finish this
-        false
-      case _ => false
-    }
-  }
-
   // TODO make it so the substitution makes valid renamings instead of throwing an error.
   def substitution(e: Expression, from: Variable, to: Expression): Expression = {
     if(from.typ != to.typ) {
@@ -191,4 +180,9 @@ object Main extends App {
 //  val test4 = Expression.rename(Abstraction(x, Abstraction(y, Abstraction(y, Application(x, Abstraction(x, x))))), x.symbol, z.symbol)
 //  print(test4)
 
+//  val test5 = Expression.areAlphaEquivalent(
+//    Abstraction(x, Application(x, y)),
+//    Expression.substitution(Abstraction(z, Application(z, x)), x, y)
+//  )
+//  print(test5)
 }
