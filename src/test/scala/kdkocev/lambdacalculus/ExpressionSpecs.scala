@@ -272,6 +272,39 @@ class ExpressionSpecs extends Specification {
 
         expr('y -> app(lam('x, 'x), 'x)) =:= result mustEqual true
       }
+      "λ1.λa.λb.λc.λd.λe.λf.λg.λh.λi.λj.λk.a1 normalize == λ11.λ10.λ9.λ8.λ7.λ6.λ5.λ4.λ3.λ2.λ1.λ0.10(11)" in {
+        val expr = lam(Symbol("1"),
+          lam('a,
+            lam('b,
+              lam('c,
+                lam('d,
+                  lam('e,
+                    lam('f,
+                      lam('g,
+                        lam('h,
+                          lam('i,
+                            lam('j,
+                              lam('k, app('a, Symbol("1"))))))))))))))
+        val result =  lam(Symbol("11"),
+          lam(Symbol("10"),
+            lam(Symbol("9"),
+              lam(Symbol("8"),
+                lam(Symbol("7"),
+                  lam(Symbol("6"),
+                    lam(Symbol("5"),
+                      lam(Symbol("4"),
+                        lam(Symbol("3"),
+                          lam(Symbol("2"),
+                            lam(Symbol("1"),
+                              lam(Symbol("0"), app(Symbol("10"), Symbol("11"))))))))))))))
+        expr.normalize mustEqual result
+      }
+      "λ0.λx.y0[y -> x] := λ0.λ1.x1" in {
+        val expr = lam(Symbol("0"), lam('x,app('y, Symbol("0"))))
+        val result = lam(Symbol("0"), lam(Symbol("1"),app('x, Symbol("1"))))
+        val actualResult = expr('y -> 'x)
+        result =:= actualResult mustEqual true
+      }
     }
   }
 }
