@@ -128,7 +128,7 @@ object Expression {
       case Abstraction(v, body) if v.symbol != from => Abstraction(v, iter(body))
       case Abstraction(v, body) if v.symbol == from =>
         if(body.allVariables().exists(variable => variable.symbol == to)) {
-          throw new Error(s"Cannot rename $from to $to in $body becaues $to is either bound or free in $body")
+          throw new Error(s"Cannot rename $from to $to in $body because $to is either bound or free in $body")
         } else {
           Abstraction(
             Variable(to, v.t),
@@ -150,7 +150,15 @@ object Expression {
         bound.toList match {
           case Nil => expr
           case (firstBound: Variable) :: restBound =>
-            iter(rename(expr, firstBound.symbol, Symbol(iteration.toString)), excludedVariables, restBound.toSet, iteration + 1)
+
+            val renamed = rename(expr, firstBound.symbol, Symbol(iteration.toString))
+
+            if(renamed.boundVariables().contains(firstBound)) {
+              iter(renamed, excludedVariables, bound, iteration + 1)
+            } else {
+              iter(renamed, excludedVariables, restBound.toSet, iteration + 1)
+            }
+
         }
       }
     }

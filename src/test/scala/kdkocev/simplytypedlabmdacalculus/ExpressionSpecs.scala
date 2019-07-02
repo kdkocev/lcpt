@@ -56,6 +56,7 @@ class ExpressionSpecs extends Specification {
       val y = Variable('y, Sigma)
       val term1 = Abstraction(x, Abstraction(x, x))
       val term2 = Abstraction(y, Abstraction(y, y))
+
       term1.isAlphaEquivalent(term2) mustEqual true
     }
     "λx:ρ λx:σ x:ρ⇒σ y:ρ[y:ρ → x:ρ] = λ0:ρ λx:σ x:ρ⇒σ x:ρ" in {
@@ -66,6 +67,7 @@ class ExpressionSpecs extends Specification {
       val yr = Variable('y, Rho)
       val term = Abstraction(xr, Abstraction(xs, Application(xrs, yr)))
       val result = Abstraction(zr, Abstraction(xs, Application(xrs, xr)))
+
       substitution(term, yr, xr) mustEqual result
     }
   }
