@@ -18,7 +18,7 @@ trait Expression {
         val (p, n) = iter(body)
 
         def getNumToReplaceWith(numToRepWi: Int): Int = {
-          if(FV(Abstraction(x, p)).contains(Variable(Symbol(numToRepWi.toString)))) {
+          if(V(Abstraction(x, p)).contains(Variable(Symbol(numToRepWi.toString)))) {
             getNumToReplaceWith(numToRepWi + 1)
           } else numToRepWi
         }
@@ -92,6 +92,7 @@ object Expression {
 case class Variable(s: Symbol) extends Expression {
   def -> (expr: Expression) = Substitution(s, expr)
   def ~> (expr: Expression) = Substitution2(s, expr)
+  def --> (expr: Expression) = Substitution3(s, expr)
   def to (v: Variable) = Renaming(this, v)
 }
 case class Application(m1: Expression, m2: Expression) extends Expression

@@ -285,24 +285,44 @@ class ExpressionSpecs extends Specification {
                           lam('i,
                             lam('j,
                               lam('k, app('a, Symbol("1"))))))))))))))
-        val result =  lam(Symbol("11"),
-          lam(Symbol("10"),
-            lam(Symbol("9"),
-              lam(Symbol("8"),
-                lam(Symbol("7"),
-                  lam(Symbol("6"),
-                    lam(Symbol("5"),
-                      lam(Symbol("4"),
-                        lam(Symbol("3"),
-                          lam(Symbol("2"),
-                            lam(Symbol("1"),
-                              lam(Symbol("0"), app(Symbol("10"), Symbol("11"))))))))))))))
+//        val result =  lam(Symbol("11"),
+//          lam(Symbol("10"),
+//            lam(Symbol("9"),
+//              lam(Symbol("8"),
+//                lam(Symbol("7"),
+//                  lam(Symbol("6"),
+//                    lam(Symbol("5"),
+//                      lam(Symbol("4"),
+//                        lam(Symbol("3"),
+//                          lam(Symbol("2"),
+//                            lam(Symbol("1"),
+//                              lam(Symbol("0"), app(Symbol("10"), Symbol("11"))))))))))))))
+    val result =  lam(Symbol("12"),
+      lam(Symbol("11"),
+        lam(Symbol("9"),
+          lam(Symbol("8"),
+            lam(Symbol("7"),
+              lam(Symbol("6"),
+                lam(Symbol("5"),
+                  lam(Symbol("4"),
+                    lam(Symbol("3"),
+                      lam(Symbol("2"),
+                        lam(Symbol("1"),
+                          lam(Symbol("0"), app(Symbol("11"), Symbol("12"))))))))))))))
+
         expr.normalize mustEqual result
       }
+      // shouldnt it be "λ0.λx.y0[y -> x] := λ0.λ1.x0" ?
       "λ0.λx.y0[y -> x] := λ0.λ1.x1" in {
         val expr = lam(Symbol("0"), lam('x,app('y, Symbol("0"))))
-        val result = lam(Symbol("0"), lam(Symbol("1"),app('x, Symbol("1"))))
-        val actualResult = expr('y -> 'x)
+        val result = lam(Symbol("0"), lam(Symbol("1"),app('x, Symbol("0"))))
+        //  val result = lam(Symbol("0"), lam(Symbol("1"),app('x, Symbol("1"))))
+        val actualResult = expr('y --> 'x)
+
+//        println(expr)
+//        println(result)
+//        println(actualResult)
+
         result =:= actualResult mustEqual true
       }
     }
