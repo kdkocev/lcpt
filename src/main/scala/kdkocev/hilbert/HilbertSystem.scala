@@ -103,6 +103,7 @@ object Main extends App {
 
           // If the right side is a proof - check if it is an axiom or an implication
           } else if (proven.contains(index2)) {
+//            println(s"FOUND IT" + proven(index2))
             proven(index2) match {
               // If it is the first axiom - check if the left side is what it should be
               case a: Axiom if a.toFormula.A == leftSide =>
@@ -117,6 +118,8 @@ object Main extends App {
 
               // If nothing matched -> stop
               case _ =>
+
+                println(s"AAAAAAAAAAAAAAA $leftSide")
                 stop(ModusPonens(index1, index2), proven, hypothesis)
             }
           } else {
@@ -130,22 +133,62 @@ object Main extends App {
     iter(proof, Map(), Map(), 1)
   }
 
-  // Example proof that (not(D) -> C)) is correct in {A, (A->B), (B->C)}
+  //  Example proof that (A -> A) is correct in {A, B}
+
   val step1 = Hypothesis(F('A))
-  val step2 = Hypothesis(Implication(F('A), F('B)))
-  val step3 = ModusPonens(1, 2)
-  val step4 = Hypothesis(Implication(F('B), F('C)))
+  val step2 = Hypothesis(F('B))
+  val step3 = Hypothesis(
+    Implication(
+      F('A),
+      Implication(
+        Implication(F('B), F('A)),
+        F('A)
+      )
+    )
+  )
+  val step4 = Hypothesis(
+    Implication(
+      Implication(
+        F('A),
+        Implication(
+          Implication(F('B), F('A)),
+          F('A)
+        )
+      ),
+      Implication(
+        Implication(F('A), Implication(F('B), F('A))),
+        Implication(F('A), F('A))
+      )
+    )
+  )
   val step5 = ModusPonens(3, 4)
-  val step6 = Axiom1(F('C), Not(F('D)))
-  val step7 = ModusPonens(5, 6)
+  val step6 = Axiom1(F('A), F('B))
+  val step7 = ModusPonens(6, 5)
 
   val test = List(
-    step1, step2, step3, step4, step5, step6, step7
+    step1, step2, step3, step4, step5, step6, step7,
   )
 
-  val res = prove(test, Implication(Not(F('D)), F('C)))
+  val res = prove(test, Implication(F('A), F('A)))
 
   println(res)
+
+  // Example proof that (not(D) -> C)) is correct in {A, (A->B), (B->C)}
+//  val step1 = Hypothesis(F('A))
+//  val step2 = Hypothesis(Implication(F('A), F('B)))
+//  val step3 = ModusPonens(1, 2)
+//  val step4 = Hypothesis(Implication(F('B), F('C)))
+//  val step5 = ModusPonens(3, 4)
+//  val step6 = Axiom1(F('C), Not(F('D)))
+//  val step7 = ModusPonens(5, 6)
+//
+//  val test = List(
+//    step1, step2, step3, step4, step5, step6, step7
+//  )
+//
+//  val res = prove(test, Implication(Not(F('D)), F('C)))
+//
+//  println(res)
 
   /*
   Output when ran:

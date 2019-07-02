@@ -134,7 +134,7 @@ case class Renaming(find: Variable, replace: Variable) extends Expression.Action
   def apply(expression: Expression): Expression = {
     import Expression._
 
-    // Replaces all occurences of find with replace blindly
+    // Replaces all occurrences of find with replace blindly
     // Even in the event (lx(lx.xy))[x to z] = (lz(lz.zy))
     def replaceAll(expr: Expression, find: Variable, replace: Variable): Expression = expr match {
       case `find` => `replace`
