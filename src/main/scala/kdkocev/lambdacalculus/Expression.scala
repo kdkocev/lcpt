@@ -16,8 +16,17 @@ trait Expression {
 
       case Abstraction(x, body) =>
         val (p, n) = iter(body)
+
+        def getNumToReplaceWith(numToRepWi: Int): Int = {
+          if(FV(Abstraction(x, p)).contains(Variable(Symbol(numToRepWi.toString)))) {
+            getNumToReplaceWith(numToRepWi + 1)
+          } else numToRepWi
+        }
+
+        val numToReplaceWith = getNumToReplaceWith(n)
+
         // Substitute x with n in the body
-        val symbolToReplaceWith = Variable(Symbol(n.toString))
+        val symbolToReplaceWith = Variable(Symbol(numToReplaceWith.toString))
         val res = Abstraction(x, p)(Renaming(x, symbolToReplaceWith))
         (res, n + 1)
     }
@@ -126,6 +135,37 @@ case class Substitution2(find: Variable, replace: Expression) extends Expression
           throw new Exception(s"Substitution2($find, $replace) not defined for $expr in $expression")
         }
     }
+    iter(expression)
+  }
+}
+
+case class Substitution3(find: Variable, replace: Expression) extends Expression.Action {
+  def apply(expression: Expression): Expression = {
+    import Expression._
+    def iter(expr: Expression): Expression = expr match {
+      case x: Variable if x == find => replace
+      case y: Variable if y != find => y
+      case Application(x, y) => Application(iter(x), iter(y))
+      case Abstraction(v, b) if v == find => Abstraction(v, b)
+      case Abstraction(v, b) if v != find =>
+        if(FV(replace).contains(v)) {
+          // Find the biggest number amongst the variable names and increment it by 1
+          val newVal: Int = V(b).filter(p =>
+            p.s.name.forall(c => c.isDigit)
+          ).foldLeft(-1)((max, f) =>
+            if(max > f.s.name.toInt)
+              max
+            else
+              f.s.name.toInt
+          ) + 1
+
+          val renamedBody = Abstraction(v, b)(Renaming(v.s, Symbol(newVal.toString)))
+          iter(renamedBody)
+        } else {
+          Abstraction(v, iter(b))
+        }
+    }
+
     iter(expression)
   }
 }
