@@ -2,8 +2,12 @@ package kdkocev.simplytypedlabmdacalculus
 import org.specs2.mutable.Specification
 
 class ExpressionSpecs extends Specification {
+  import Expression._
   object Sigma extends Type {
     override def toString: String = "σ"
+  }
+  object Rho extends Type {
+    override def toString: String = "ρ"
   }
 
   "Expression" should {
@@ -46,6 +50,23 @@ class ExpressionSpecs extends Specification {
       val abs1 = Abstraction(Variable('x, To(Sigma, Sigma)), Application(Variable('x, To(Sigma, Sigma)), Abstraction(y, y)))
 
       abs1.typ must throwAn[Error]
+    }
+    "λx.λx.x =a= λy.λy.y" in {
+      val x = Variable('x, Sigma)
+      val y = Variable('y, Sigma)
+      val term1 = Abstraction(x, Abstraction(x, x))
+      val term2 = Abstraction(y, Abstraction(y, y))
+      term1.isAlphaEquivalent(term2) mustEqual true
+    }
+    "λx:ρ λx:σ x:ρ⇒σ y:ρ[y:ρ → x:ρ] = λ0:ρ λx:σ x:ρ⇒σ x:ρ" in {
+      val zr = Variable(Symbol("0"), Rho)
+      val xr = Variable('x, Rho)
+      val xs = Variable('x, Sigma)
+      val xrs = Variable('x, To(Rho, Sigma))
+      val yr = Variable('y, Rho)
+      val term = Abstraction(xr, Abstraction(xs, Application(xrs, yr)))
+      val result = Abstraction(zr, Abstraction(xs, Application(xrs, xr)))
+      substitution(term, yr, xr) mustEqual result
     }
   }
 }
